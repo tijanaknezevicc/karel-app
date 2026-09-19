@@ -8,6 +8,18 @@ class Direction(Enum):
     SOUTH = 2
     WEST = 3
 
+def direction_delta(direction):
+    if direction == Direction.NORTH:
+        return (0, 1)
+    elif direction == Direction.EAST:
+        return (1, 0)
+    elif direction == Direction.SOUTH:
+        return (0, -1)
+    elif direction == Direction.WEST:
+        return (-1, 0)
+    else:
+        raise ValueError("Invalid direction")
+
 class Robot:
     def __init__(self, x=0, y=0, direction=Direction.NORTH):
         self.x = x
@@ -24,16 +36,8 @@ class Robot:
             raise KarelRuntimeError("Robot Karel nije postavljen u lavirint!")
 
     def _next_position(self):
-        _x, _y = self.x, self.y
-        if self.direction == Direction.NORTH:
-            _y += 1
-        elif self.direction == Direction.EAST:
-            _x += 1
-        elif self.direction == Direction.SOUTH:
-            _y -= 1
-        elif self.direction == Direction.WEST:
-            _x -= 1
-        return (_x, _y)
+        delta_x, delta_y = direction_delta(self.direction)
+        return (self.x + delta_x, self.y + delta_y)
 
     def can_move_forward(self): # moze_napred()
         self._ensure_in_world()

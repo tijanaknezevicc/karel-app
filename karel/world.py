@@ -10,8 +10,11 @@ class World:
     def has_wall(self, x1, y1, x2, y2):
         return frozenset({(x1, y1), (x2, y2)}) in self.walls
 
-    def add_wall(self, x1, y1, x2, y2):
+    def add_wall(self, x1, y1, x2, y2): # for maze generator
         self.walls.add(frozenset({(x1, y1), (x2, y2)}))
+
+    def remove_wall(self, x1, y1, x2, y2): # for maze generator
+        self.walls.discard(frozenset({(x1, y1), (x2, y2)})) # ignores if wall doesn't exist
 
     def out_of_bounds(self, x, y):
         return x < 0 or x >= self.width or y < 0 or y >= self.height

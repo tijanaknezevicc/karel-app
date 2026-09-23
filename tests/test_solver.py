@@ -17,8 +17,14 @@ def test_solvable_maze_returns_true(empty_world):
 
 
 def test_unreachable_goal_returns_false():
-    # cilj (2, 2) je opkoljen zidovima sa sve četiri strane
-    walls = {(1, 2), (3, 2), (2, 1), (2, 3)}
+    # Cilj (2, 2) je opkoljen zidovima sa sve četiri strane —
+    # do njega se ne može stići nijednim potezom.
+    walls = {
+        frozenset({(2, 2), (1, 2)}),
+        frozenset({(2, 2), (3, 2)}),
+        frozenset({(2, 2), (2, 1)}),
+        frozenset({(2, 2), (2, 3)}),
+    }
     world = World(width=5, height=5, walls=walls)
 
     start = (0, 0, Direction.NORTH)

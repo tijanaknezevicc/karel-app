@@ -2,6 +2,7 @@ from enum import Enum
 
 from karel.exceptions import KarelRuntimeError, NoBeeperError, NoBeepersToPutError, OutOfBoundsError, WallCollisionError
 
+
 class Direction(Enum):
     NORTH = 0
     EAST = 1
@@ -26,7 +27,7 @@ class Robot:
         self.y = y
         self.direction = direction
         self.beepers = 0
-        self.world = None  # this will be set when the robot is placed in a world
+        self.world = None
 
     def place_in_world(self, world):
         self.world = world
@@ -42,7 +43,7 @@ class Robot:
     def can_move_forward(self): # moze_napred()
         self._ensure_in_world()
         _x, _y = self._next_position()
-        return not self.world.is_blocked(_x, _y)
+        return not self.world.is_blocked(self.x, self.y ,_x, _y)
 
     def move_forward(self): # napred()
         self._ensure_in_world()
@@ -50,7 +51,7 @@ class Robot:
 
         if self.world.out_of_bounds(_x, _y):
             raise OutOfBoundsError("Robot Karel je izašao izvan granica lavirinta!")
-        elif self.world.is_wall(_x, _y):
+        elif self.world.has_wall(self.x, self.y, _x, _y):
             raise WallCollisionError("Robot Karel je udario u zid!")
         else:
             self.x = _x

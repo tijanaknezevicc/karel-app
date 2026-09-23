@@ -2,6 +2,7 @@ from collections import deque
 
 from karel.robot import Direction, direction_delta
 
+
 def get_neighbors(world, position):
     x, y, direction = position
     neighbors = []
@@ -9,7 +10,7 @@ def get_neighbors(world, position):
     # forward
     delta_x, delta_y = direction_delta(direction)
     new_x, new_y = x + delta_x, y + delta_y
-    if not world.is_blocked(new_x, new_y):
+    if not world.is_blocked(x, y, new_x, new_y):
         neighbors.append((new_x, new_y, direction))
 
     # left

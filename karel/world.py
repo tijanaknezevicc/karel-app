@@ -7,20 +7,23 @@ class World:
         self.walls = walls if walls is not None else set()
         self.beepers = beepers if beepers is not None else dict()
 
-    def is_wall(self, x, y):
-        return (x, y) in self.walls
+    def has_wall(self, x1, y1, x2, y2):
+        return frozenset({(x1, y1), (x2, y2)}) in self.walls
+
+    def add_wall(self, x1, y1, x2, y2):
+        self.walls.add(frozenset({(x1, y1), (x2, y2)}))
 
     def out_of_bounds(self, x, y):
         return x < 0 or x >= self.width or y < 0 or y >= self.height
 
-    def is_blocked(self, x, y):
-        return self.is_wall(x, y) or self.out_of_bounds(x, y)
+    def is_blocked(self, x1, y1, x2, y2):
+        return self.has_wall(x1, y1, x2, y2) or self.out_of_bounds(x2, y2)
 
     def has_beeper(self, x, y):
         return (x, y) in self.beepers
 
-    def add_beeper(self, x, y):
-        self.beepers[(x, y)] = self.beepers.get((x, y), 0) + 1
+    def add_beeper(self, x, y, count=1):
+        self.beepers[(x, y)] = self.beepers.get((x, y), 0) + count
 
     def remove_beeper(self, x, y):
         if (x, y) in self.beepers:

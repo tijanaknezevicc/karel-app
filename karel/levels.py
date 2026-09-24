@@ -18,6 +18,7 @@ LEVELS["brojacka_petlja"] = {
     "commands": LEVELS["linijski"]["commands"],
     "node_types": LEVELS["linijski"]["node_types"] | {ast.For, ast.Store, ast.Constant},
     "builtins": LEVELS["linijski"]["builtins"] | {"range"},
+    "required_node_types": {ast.For},
 }
 
 LEVELS["uslovna_petlja"] = {

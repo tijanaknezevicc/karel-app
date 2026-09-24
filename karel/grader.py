@@ -1,5 +1,7 @@
+import ast
 import random
 
+from karel.levels import LEVELS
 from karel.maze import generate_perfect_maze, generate_stretched_maze
 from karel.robot import Direction, Robot
 from karel.executor import execute_program, validate_syntax
@@ -8,14 +10,45 @@ from karel.generator import random_square, generate_beeper_corridor, generate_be
 from karel.world import World
 
 
+def grade(code, level, task_factory, num_variations=5):
+    try:
+        validate_syntax(code, level)
+    except InvalidCommandError:
+        return False # invalid syntax
+
+    required = LEVELS[level].get("required_node_types", set())
+    if required:
+        tree = ast.parse(code)
+        present_types = {type(node) for node in ast.walk(tree)}
+        if not required.issubset(present_types):
+            return False
+
+    for _ in range(num_variations):
+        world, start, initial_beepers, success_check = task_factory()
+        x, y, direction = start
+
+        robot = Robot(x=x, y=y, direction=direction)
+        robot.beepers = initial_beepers
+        robot.place_in_world(world)
+
+        try:
+            execute_program(code, robot, level)
+        except KarelRuntimeError:
+            return False  # error
+
+        if not success_check(robot, world):
+            return False  # no errors, but incorrect result
+
+    return True
+
 def _as_maker(task_factory):
     def maker():
         return task_factory
     return maker
 
 def maze_pick_up_task():
-    width = random.randint(4, 8)
-    height = random.randint(4, 8)
+    width = random.randint(3, 6)
+    height = random.randint(3, 6)
     world, start, goal, initial_beepers, item_position = generate_maze_task(width, height, "pick_up")
 
     expected_beepers = world.beeper_count(*goal)
@@ -26,32 +59,32 @@ def maze_pick_up_task():
     return world, start, initial_beepers, success
 
 def maze_put_down_task():
-    width = random.randint(4, 8)
-    height = random.randint(4, 8)
+    width = random.randint(3, 6)
+    height = random.randint(3, 6)
     world, start, goal, initial_beepers, item_position = generate_maze_task(width, height, "put_down")
 
     def success(robot, world):
-        return world.beeper_count(*goal) == initial_beepers and robot.beeper_count_in_bag() == 0
+        return world.beeper_count(*goal) == 0 and robot.beeper_count_in_bag() == 0
 
     return world, start, initial_beepers, success
 
 def maze_both_task():
-    width = random.randint(4, 8)
-    height = random.randint(4, 8)
+    width = random.randint(3, 6)
+    height = random.randint(3, 6)
     world, start, goal, initial_beepers, item_position = generate_maze_task(width, height, "both")
 
     expected_beepers = world.beeper_count(*item_position)
 
     def success(robot, world):
         picked_up = world.beeper_count(*item_position) == 0
-        delivered = world.beeper_count(*goal) == expected_beepers
+        delivered = world.beeper_count(*goal) == 0
         return picked_up and delivered
 
     return world, start, initial_beepers, success
 
 def maze_multi_item_task():
-    width = random.randint(5, 8)
-    height = random.randint(5, 8)
+    width = random.randint(3, 6)
+    height = random.randint(3, 6)
     world, start, source_positions, destinations = generate_multi_item_maze_task(width, height)
 
     def success(robot, world):
@@ -92,30 +125,6 @@ def make_beeper_corridor_conditional_task():
         return world, start, 0, success
 
     return task_factory
-
-def grade(code, level, task_factory, num_variations=5):
-    try:
-        validate_syntax(code, level)
-    except InvalidCommandError:
-        return False # invalid syntax
-
-    for _ in range(num_variations):
-        world, start, initial_beepers, success_check = task_factory()
-        x, y, direction = start
-
-        robot = Robot(x=x, y=y, direction=direction)
-        robot.beepers = initial_beepers
-        robot.place_in_world(world)
-
-        try:
-            execute_program(code, robot, level)
-        except KarelRuntimeError:
-            return False  # error
-
-        if not success_check(robot, world):
-            return False  # no errors, but incorrect result
-
-    return True
 
 def make_classic_maze_task(min_size=4, max_size=6, one_beeper=True):
     width = random.randint(min_size, max_size)

@@ -28,21 +28,25 @@ def generate_maze_task(width, height, task_type="pick_up", one_beeper=True): # a
         if one_beeper:
             world.add_beeper(*goal)
         else:
-            world.add_beeper(*goal, random.randint(1, 30))
+            world.add_beeper(*goal, random.randint(1, 10))
 
     elif task_type == "put_down":
         if one_beeper:
             initial_beepers = 1
         else:
-            initial_beepers = random.randint(1, 30)
+            initial_beepers = random.randint(1, 10)
+        world.add_beeper(*goal, -initial_beepers)  # negative beepers to indicate where the robot needs to put them down
 
     elif task_type == "both":
         item_position = random_square(width, height, exclude={(0, 0), goal})
         if one_beeper:
+            beepers_to_add = 1
             world.add_beeper(*item_position)
         else:
             beepers_to_add = random.randint(1, 10)
             world.add_beeper(*item_position, beepers_to_add)
+        world.add_beeper(*goal, -beepers_to_add)  # negative beepers to indicate where the robot needs to put them down
+
     else:
         raise ValueError("Invalid task type. Must be 'pick_up', 'put_down' or 'both'.")
 

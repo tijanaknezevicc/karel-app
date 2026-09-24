@@ -28,7 +28,12 @@ class Robot:
         self.direction = direction
         self.beepers = 0
         self.world = None
+        self.on_step = None  # callback for each step, can be set externally
 
+    def _notify_step(self):
+        if self.on_step is not None:
+            self.on_step()
+    
     def place_in_world(self, world):
         self.world = world
 
@@ -56,12 +61,15 @@ class Robot:
         else:
             self.x = _x
             self.y = _y
+        self._notify_step()
 
     def turn_right(self): # desno()
         self.direction = Direction((self.direction.value + 1) % 4)
+        self._notify_step()
 
     def turn_left(self): # levo()
         self.direction = Direction((self.direction.value + 3) % 4)
+        self._notify_step()
 
     def beeper_present_on_field(self): # ima_loptica_na_polju()
         self._ensure_in_world()
@@ -84,6 +92,7 @@ class Robot:
             raise NoBeepersToPutError("Robot Karel nema loptica za postavljanje!")
         self.beepers -= 1
         self.world.add_beeper(self.x, self.y)
+        self._notify_step()
 
     def pick_beeper(self): # uzmi()
         self._ensure_in_world()
@@ -92,6 +101,7 @@ class Robot:
             raise NoBeeperError("Na ovom polju ne postoji loptica!")
         self.world.remove_beeper(self.x, self.y)
         self.beepers += 1
+        self._notify_step()
 
     def get_position(self):
         return (self.x, self.y)

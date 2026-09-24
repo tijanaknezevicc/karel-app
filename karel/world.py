@@ -27,6 +27,8 @@ class World:
 
     def add_beeper(self, x, y, count=1):
         self.beepers[(x, y)] = self.beepers.get((x, y), 0) + count
+        if self.beepers[(x, y)] == 0:
+            del self.beepers[(x, y)]
 
     def remove_beeper(self, x, y):
         if (x, y) in self.beepers:

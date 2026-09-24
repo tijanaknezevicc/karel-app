@@ -6,7 +6,7 @@ from karel.solver import is_solvable
 from karel.world import World
 
 
-def _random_square(width, height, exclude=None):
+def random_square(width, height, exclude=None):
     if exclude is None:
         exclude = []
     while True:
@@ -20,7 +20,7 @@ def generate_maze_task(width, height, task_type="pick_up", one_beeper=True): # a
     generate_perfect_maze(world)
 
     start = (0, 0, Direction.EAST)
-    goal = _random_square(width, height, exclude={(0, 0)})
+    goal = random_square(width, height, exclude={(0, 0)})
     initial_beepers = 0
     item_position = None
 
@@ -37,7 +37,7 @@ def generate_maze_task(width, height, task_type="pick_up", one_beeper=True): # a
             initial_beepers = random.randint(1, 30)
 
     elif task_type == "both":
-        item_position = _random_square(width, height, exclude={(0, 0), goal})
+        item_position = random_square(width, height, exclude={(0, 0), goal})
         if one_beeper:
             world.add_beeper(*item_position)
         else:
@@ -60,7 +60,7 @@ def generate_multi_item_maze_task(width, height, num_sources=2, num_destinations
 
     destinations = {}
     for _ in range(num_destinations):
-        pos = _random_square(width, height, exclude=excluded)
+        pos = random_square(width, height, exclude=excluded)
         destinations[pos] = random.randint(min_per_destination, max_per_destination)
         excluded.append(pos)
 
@@ -76,7 +76,7 @@ def generate_multi_item_maze_task(width, height, num_sources=2, num_destinations
 
     source_positions = []
     for _ in range(num_sources):
-        pos = _random_square(width, height, exclude=excluded)
+        pos = random_square(width, height, exclude=excluded)
         source_positions.append(pos)
         excluded.append(pos)
 
@@ -227,9 +227,9 @@ def _place_corridor_beepers(world, positions, step=1, one_beeper=True, random_sq
 
     return beepers_added
 
-def generate_polyline_corridor(min_side=2, max_side=5, num_segments=3, one_beeper=True):
+def generate_polyline_corridor(min_side=2, max_side=5, num_segments=3, one_beeper=True, initial_direction=None, turn=None, random_squares=False):
     side_length = random.randint(min_side, max_side)
-    world, path = generate_polyline_corridor_structure(num_segments, side_length)
+    world, path = generate_polyline_corridor_structure(num_segments, side_length, initial_direction=initial_direction, turn=turn)
 
     if num_segments == 4:
         candidate_squares = path[1:-1]  # exclude start and end, they are the same square
@@ -238,7 +238,7 @@ def generate_polyline_corridor(min_side=2, max_side=5, num_segments=3, one_beepe
         candidate_squares = path[1:]  # exclude start
         goal = path[-1]
 
-    total_beepers = _place_corridor_beepers(world, candidate_squares, step=1, one_beeper=one_beeper, random_squares=False)
+    total_beepers = _place_corridor_beepers(world, candidate_squares, step=1, one_beeper=one_beeper, random_squares=random_squares)
 
     start = (*path[0], Direction.EAST)
 

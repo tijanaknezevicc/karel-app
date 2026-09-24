@@ -300,3 +300,22 @@ def test_l_and_u_path_does_not_close():
     for num_segments in (2, 3):
         world, path = generate_polyline_corridor_structure(num_segments, side_length=3)
         assert path[0] != path[-1]
+
+def test_polyline_fixed_shape_stays_same_across_calls():
+    # isti initial_direction/turn, razlicita duzina — oblik (niz pravaca) mora biti isti
+    world1, path1 = generate_polyline_corridor_structure(
+        num_segments=2, side_length=3, initial_direction=Direction.NORTH, turn="right"
+    )
+    world2, path2 = generate_polyline_corridor_structure(
+        num_segments=2, side_length=5, initial_direction=Direction.NORTH, turn="right"
+    )
+    # oba kreću u istom pravcu iz (0,0) — prva dva koraka moraju biti identична
+    assert path1[1] == path2[1]
+
+
+def test_polyline_random_squares_still_keeps_edge_beepers():
+    for _ in range(30):
+        world, start, total = generate_polyline_corridor(
+            min_side=6, max_side=6, num_segments=2, one_beeper=True, random_squares=True
+        )
+        assert total > 0  # bar ivice su uvek pokrivene, isto svojstvo kao kod obicnog hodnika

@@ -188,15 +188,14 @@ def generate_branching_corridor_structure(orientation, length, branch_probabilit
 
     return world, main_line, branch_positions
 
-def generate_polyline_corridor_structure(num_segments, side_length):
-    if num_segments not in (2, 3, 4):
-        raise ValueError("num_segments mora biti 2, 3 ili 4.")
+def generate_polyline_corridor_structure(num_segments, side_length, initial_direction=None, turn=None):
 
-    if num_segments == 4:
-        initial_direction = Direction.EAST
-        turn = "left"
-    else:
+    if num_segments not in (2, 3, 4):
+        raise ValueError("num_segments must be 2, 3 or 4")
+
+    if initial_direction is None:
         initial_direction = random.choice(list(Direction))
+    if turn is None:
         turn = random.choice(["left", "right"])
 
     if turn == "left":

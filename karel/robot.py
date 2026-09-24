@@ -63,11 +63,11 @@ class Robot:
     def turn_left(self): # levo()
         self.direction = Direction((self.direction.value + 3) % 4)
 
-    def beeper_present_on_square(self): # ima_loptica_na_polju()
+    def beeper_present_on_field(self): # ima_loptica_na_polju()
         self._ensure_in_world()
         return self.world.has_beeper(self.x, self.y)
 
-    def beeper_count_on_square(self): # broj_loptica_na_polju()
+    def beeper_count_on_field(self): # broj_loptica_na_polju()
         self._ensure_in_world()
         return self.world.beeper_count(self.x, self.y)
 

@@ -23,7 +23,7 @@ class World:
         return self.has_wall(x1, y1, x2, y2) or self.out_of_bounds(x2, y2)
 
     def has_beeper(self, x, y):
-        return (x, y) in self.beepers
+        return self.beepers.get((x, y), 0) > 0
 
     def add_beeper(self, x, y, count=1):
         self.beepers[(x, y)] = self.beepers.get((x, y), 0) + count

@@ -17,3 +17,11 @@ class NoBeeperError(KarelRuntimeError):
 class NoBeepersToPutError(KarelRuntimeError):
     # Karel tries to put a beeper but has none
     pass
+
+class InvalidCommandError(Exception):
+    # Invalid command given to Karel
+    pass
+
+class InfiniteLoopError(KarelRuntimeError):
+    # Karel is stuck in an infinite loop
+    pass

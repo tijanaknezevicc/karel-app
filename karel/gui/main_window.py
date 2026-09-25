@@ -1,11 +1,16 @@
 import copy
 import random
 
+from pathlib import Path
+
 from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QButtonGroup, QLabel
 from PySide6.QtCore import QTimer, Qt
+from PySide6.QtGui import QIcon
+
 
 from karel.gui.code_editor import CodeEditor
-from karel.gui.style import LEVEL_BUTTON_STYLE, PANEL_LABEL_STYLE, STATUS_STYLES, TASK_DESCRIPTION_STYLE
+from karel.gui.help_dialog import HelpDialog
+from karel.gui.style import HELP_BUTTON_STYLE, LEVEL_BUTTON_STYLE, PANEL_LABEL_STYLE, STATUS_STYLES, TASK_DESCRIPTION_STYLE
 from karel.robot import Robot
 from karel.gui.maze_view import MazeView
 from karel.executor import execute_program
@@ -23,12 +28,16 @@ LEVEL_LABELS = {
     "napredni": "5. Napredni",
 }
 
+_ASSETS_DIR = Path(__file__).parent / "assets"
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Karel")
-        self.setMinimumSize(900, 650)
+        self.setMinimumSize(1100, 650)
+        self.setWindowIcon(QIcon(str(_ASSETS_DIR / "robot_south.png")))
+
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -48,6 +57,11 @@ class MainWindow(QMainWindow):
                 button.setChecked(True)
             button.toggled.connect(self._make_level_handler(level))
 
+        self.help_button = QPushButton("Podsetnik")
+        self.help_button.setStyleSheet(HELP_BUTTON_STYLE)
+        self.help_button.clicked.connect(self._on_help_clicked)
+        level_panel.addWidget(self.help_button)
+
         level_panel.addStretch()
 
         code_panel = QVBoxLayout()
@@ -66,10 +80,14 @@ class MainWindow(QMainWindow):
         self.new_variation_button = QPushButton("Nova varijanta")
         self.new_variation_button.clicked.connect(self._on_new_variation_clicked)
 
+        self.reset_button = QPushButton("Resetuj")
+        self.reset_button.clicked.connect(self._render_current_task)
+
         run_row = QHBoxLayout()
         run_row.addWidget(self.run_button)
+        run_row.addWidget(self.reset_button)
         run_row.addWidget(self.new_variation_button)
-        code_panel.addLayout(run_row)
+        code_panel.addLayout(run_row)        
 
         self.new_task_button = QPushButton("Sledeći zadatak")
         code_panel.addWidget(self.new_task_button)
@@ -82,14 +100,17 @@ class MainWindow(QMainWindow):
         self.task_description_label = QLabel("")
         self.task_description_label.setWordWrap(True)
         self.task_description_label.setStyleSheet(TASK_DESCRIPTION_STYLE)
-        maze_panel.addWidget(self.task_description_label)
+
+        maze_top_row = QHBoxLayout()
+        maze_top_row.addWidget(self.task_description_label)
+        maze_panel.addLayout(maze_top_row)
         maze_panel.addWidget(self.maze_view)
 
         right_side = QVBoxLayout()
 
         content_layout = QHBoxLayout()
-        content_layout.addLayout(code_panel, 2)
-        content_layout.addLayout(maze_panel, 3)
+        content_layout.addLayout(code_panel, 3)
+        content_layout.addLayout(maze_panel, 4)
         right_side.addLayout(content_layout)
 
         self.status_label = QLabel("")
@@ -101,6 +122,10 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(right_side)
 
         self._load_new_task("linijski")
+
+    def _on_help_clicked(self):
+        dialog = HelpDialog(self.task_level, self)
+        dialog.exec()
 
     def _set_status(self, text, kind="info"):
         self.status_label.setText(text)
@@ -137,6 +162,7 @@ class MainWindow(QMainWindow):
     def _render_current_task(self):
         self.maze_view.render_world(self.task_world)
         x, y, direction = self.task_start
+        self.maze_view.set_bag_count(self.task_initial_beepers)
         self.maze_view.draw_robot(self.task_world, x, y, direction, self.task_initial_beepers)
 
     def _on_new_task_clicked(self):
@@ -162,6 +188,7 @@ class MainWindow(QMainWindow):
         self.current_world.beepers = beepers
         self.maze_view.render_world(self.current_world)
         self.maze_view.draw_robot(self.current_world, x, y, direction, bag_count)
+        self.maze_view.set_bag_count(bag_count)
         self.animation_index += 1
 
     def _check_success(self):

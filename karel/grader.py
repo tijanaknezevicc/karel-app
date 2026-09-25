@@ -66,8 +66,8 @@ def missing_required_constructs(code, level):
     return [_NODE_TYPE_LABELS.get(t, t.__name__) for t in missing_types]
 
 def maze_pick_up_task():
-    width = random.randint(3, 6)
-    height = random.randint(3, 6)
+    width = random.randint(3, 5)
+    height = random.randint(3, 5)
     world, start, goal, initial_beepers, item_position = generate_maze_task(width, height, "pick_up")
 
     expected_beepers = world.beeper_count(*goal)
@@ -86,12 +86,12 @@ def maze_put_down_task():
     def success(robot, world):
         return world.beeper_count(*goal) == 0 and robot.beeper_count_in_bag() == 0
 
-    success.description = "Ostavi lopticu u rupi."
+    success.description = "Ostavi lopticu u rupu."
     return world, start, initial_beepers, success
 
 def maze_both_task():
-    width = random.randint(3, 6)
-    height = random.randint(3, 6)
+    width = random.randint(3, 5)
+    height = random.randint(3, 5)
     world, start, goal, initial_beepers, item_position = generate_maze_task(width, height, "both")
 
     def success(robot, world):
@@ -99,10 +99,10 @@ def maze_both_task():
         delivered = world.beeper_count(*goal) == 0
         return picked_up and delivered
 
-    success.description = "Pokupi lopticu i ostavi je u rupi."
+    success.description = "Pokupi lopticu i ostavi je u rupu."
     return world, start, initial_beepers, success
 
-def make_maze_beeper_count_task(min_size=4, max_size=6, task_type="pick_up"):
+def make_maze_beeper_count_task(min_size=3, max_size=5, task_type="pick_up"):
     width = random.randint(min_size, max_size)
     height = random.randint(min_size, max_size)
 
@@ -152,8 +152,8 @@ def make_maze_beeper_count_task(min_size=4, max_size=6, task_type="pick_up"):
     return task_factory
 
 def maze_multi_item_task():
-    width = random.randint(3, 6)
-    height = random.randint(3, 6)
+    width = random.randint(3, 5)
+    height = random.randint(3, 5)
     world, start, source_positions, destinations = generate_multi_item_maze_task(width, height)
 
     def success(robot, world):
@@ -167,7 +167,7 @@ def maze_multi_item_task():
 
 def beeper_corridor_counting_task():
     world, start, total = generate_beeper_corridor(
-        min_length=5, max_length=10, step=1, one_beeper=True, random_squares=False
+        min_length=5, max_length=8, step=1, one_beeper=True, random_squares=False
     )
     def success(robot, world):
         return len(world.beepers) == 0
@@ -179,7 +179,7 @@ def make_beeper_corridor_conditional_task():
 
     def task_factory():
         world, start, total = generate_beeper_corridor(
-            min_length=5, max_length=10, step=1,
+            min_length=5, max_length=8, step=1,
             one_beeper=False, random_squares=False,
             orientation=orientation,
         )
@@ -190,7 +190,7 @@ def make_beeper_corridor_conditional_task():
 
     return task_factory
 
-def make_beeper_corridor_random_squares_task(min_length=6, max_length=12):
+def make_beeper_corridor_random_squares_task(min_length=4, max_length=8):
     orientation = random.choice(["horizontal", "vertical"])
 
     def task_factory():
@@ -225,7 +225,7 @@ def make_polyline_task(min_side=2, max_side=5, num_segments=None, random_squares
 
     return task_factory
 
-def make_branching_corridor_task(min_length=6, max_length=12, branch_probability=0.3):
+def make_branching_corridor_task(min_length=4, max_length=8, branch_probability=0.3):
     orientation = random.choice(["horizontal", "vertical"])
     main_line_index = random.choice([0, 1])
 
@@ -254,7 +254,7 @@ def beeper_corridor_two_square_task():
 
 def beeper_corridor_end_task():
     world, start, total = generate_beeper_corridor(
-        min_length=5, max_length=10, step=1,
+        min_length=4, max_length=8, step=1,
         one_beeper=False, random_squares=False, 
         spread=False, with_final_hole=False
     )
@@ -265,7 +265,7 @@ def beeper_corridor_end_task():
 
 def beeper_corridor_end_hole_task():
     world, start, total = generate_beeper_corridor(
-        min_length=5, max_length=10, step=1,
+        min_length=5, max_length=8, step=1,
         one_beeper=False, random_squares=False, 
         spread=False, with_final_hole=True
     )
@@ -276,7 +276,7 @@ def beeper_corridor_end_hole_task():
 
 def beeper_hole_corridor_task():
     world, start, total = generate_beeper_hole_corridor(
-        min_pairs=2, max_pairs=5, 
+        min_pairs=2, max_pairs=4, 
         one_beeper=True, orientation=None
     )
     def success(robot, world):
@@ -303,7 +303,7 @@ def make_staircase_task(min_side=1, max_side=1, min_segments=4, max_segments=8, 
 
 def staircase_counting_task():
     world, start, total = generate_staircase_corridor(
-        min_segments=2, max_segments=4, min_side=1, max_side=3,
+        min_segments=4, max_segments=8, min_side=1, max_side=3,
         one_beeper=True, random_squares=False
     )
     def success(robot, world):

@@ -110,7 +110,7 @@ def _corridor_position(square, orientation):
         return (0, square)
   
 
-def generate_beeper_corridor(min_length=5, max_length=10, spread=True, step=1, one_beeper=True, random_squares=False,
+def generate_beeper_corridor(min_length=5, max_length=8, spread=True, step=1, one_beeper=True, random_squares=False,
                               orientation=None, with_final_hole=False):
 
     if spread and with_final_hole:
@@ -167,7 +167,7 @@ def generate_beeper_corridor(min_length=5, max_length=10, spread=True, step=1, o
     else:
         raise RuntimeError("generated maze is unsolvable!")
 
-def generate_beeper_hole_corridor(min_pairs=2, max_pairs=5, one_beeper=True, orientation=None):
+def generate_beeper_hole_corridor(min_pairs=2, max_pairs=4, one_beeper=True, orientation=None):
     if orientation is None:
         orientation = random.choice(["horizontal", "vertical"])
 
@@ -188,7 +188,7 @@ def generate_beeper_hole_corridor(min_pairs=2, max_pairs=5, one_beeper=True, ori
 
     return world, start, total_beepers
 
-def generate_branching_corridor(min_length=6, max_length=12, branch_probability=0.3, one_beeper=True, orientation=None, main_line_index=None):
+def generate_branching_corridor(min_length=4, max_length=8, branch_probability=0.3, one_beeper=True, orientation=None, main_line_index=None):
     if orientation is None:
         orientation = random.choice(["horizontal", "vertical"])
     length = random.randint(min_length, max_length)
@@ -250,20 +250,27 @@ def generate_polyline_corridor(min_side=2, max_side=5, num_segments=3, one_beepe
 
     return world, start, total_beepers
 
-def generate_staircase_corridor(min_segments=2, max_segments=4, min_side=1, max_side=1, one_beeper=True, diagonal=None, first_direction=None, random_squares=False):
+def generate_staircase_corridor(min_segments=2, max_segments=4, min_side=1, max_side=1, step=None, offset=None,
+                                  one_beeper=True, diagonal=None, first_direction=None, random_squares=False):
     num_segments = random.randint(min_segments, max_segments)
     side_length = random.randint(min_side, max_side)
+
     world, path = generate_staircase_corridor_structure(
-        num_segments, side_length, 
+        num_segments, side_length,
         diagonal=diagonal, first_direction=first_direction
     )
-
     candidate_squares = path[1:]
+
+    if step is None:
+        step = side_length
+    if offset is None:
+        offset = side_length - 1
+
     total_beepers = _place_corridor_beepers(
-        world, candidate_squares, step=2, offset=1,
+        world, candidate_squares, step=step, offset=offset,
         one_beeper=one_beeper, random_squares=random_squares
     )
-
+    
     start = (*path[0], Direction.EAST)
     goal = path[-1]
 

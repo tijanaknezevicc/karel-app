@@ -159,8 +159,7 @@ class CodeEditor(QPlainTextEdit):
         return False
 
     def line_numbers_width(self):
-        digits = len(str(max(1, self.blockCount())))
-        return 10 + self.fontMetrics().horizontalAdvance("9") * digits
+        return 10 + self.fontMetrics().horizontalAdvance("9") * 2
 
     def _update_line_numbers_width(self, _):
         self.setViewportMargins(self.line_numbers_width(), 0, 0, 0)

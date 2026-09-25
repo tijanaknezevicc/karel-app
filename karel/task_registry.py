@@ -13,25 +13,25 @@ from karel.grader import (
 )
 
 
-def _uslovna_polyline_maker():
+def _make_polyline_uniform_task():
     return make_polyline_task(random_squares=False)
 
-def _grananje_polyline_maker():
+def _make_polyline_random_task():
     return make_polyline_task(random_squares=True)
 
-def _maze_beeper_count_pick_up_maker():
+def _make_maze_beeper_count_pick_up_task():
     return make_maze_beeper_count_task(task_type="pick_up")
 
-def _maze_beeper_count_put_down_maker():
+def _make_maze_beeper_count_put_down_task():
     return make_maze_beeper_count_task(task_type="put_down")
 
-def _maze_beeper_count_both_maker():
+def _make_maze_beeper_count_both_task():
     return make_maze_beeper_count_task(task_type="both")
 
-def _uslovna_staircase_maker():
+def _make_staircase_uniform_task():
     return make_staircase_task(random_squares=False)
 
-def _grananje_staircase_maker():
+def _make_staircase_random_task():
     return make_staircase_task(random_squares=True)
 
 
@@ -53,18 +53,18 @@ BROJACKA_PETLJA = [
 
 USLOVNA_PETLJA = [
     (make_beeper_corridor_conditional_task, 5),
-    (_uslovna_polyline_maker, 5),
-    (_maze_beeper_count_pick_up_maker, 5),
-    (_maze_beeper_count_put_down_maker, 5),
-    (_maze_beeper_count_both_maker, 5),
-    (_uslovna_staircase_maker, 5),
+    (_make_polyline_uniform_task, 5),
+    (_make_maze_beeper_count_pick_up_task, 5),
+    (_make_maze_beeper_count_put_down_task, 5),
+    (_make_maze_beeper_count_both_task, 5),
+    (_make_staircase_uniform_task, 5),
 ]
 
 GRANANJE = [
     (make_beeper_corridor_random_squares_task, 5),
-    (_grananje_polyline_maker, 5),
+    (_make_polyline_random_task, 5),
     (make_branching_corridor_task, 5),
-    (_grananje_staircase_maker, 5),
+    (_make_staircase_random_task, 5),
 ]
 
 NAPREDNI = BROJACKA_PETLJA + USLOVNA_PETLJA + GRANANJE

@@ -94,8 +94,6 @@ def maze_both_task():
     height = random.randint(3, 6)
     world, start, goal, initial_beepers, item_position = generate_maze_task(width, height, "both")
 
-    expected_beepers = world.beeper_count(*item_position)
-
     def success(robot, world):
         picked_up = world.beeper_count(*item_position) == 0
         delivered = world.beeper_count(*goal) == 0

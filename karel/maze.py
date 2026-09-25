@@ -89,47 +89,6 @@ def generate_branching_corridor_structure(orientation, length, branch_probabilit
 
     return world, main_line, branch_positions
 
-def generate_polyline_corridor_structure(num_segments, side_length, initial_direction=None, turn=None):
-
-    if num_segments not in (2, 3, 4):
-        raise ValueError("num_segments must be 2, 3 or 4")
-
-    if initial_direction is None:
-        initial_direction = random.choice(list(Direction))
-    if turn is None:
-        turn = random.choice(["left", "right"])
-
-    if turn == "left":
-        turn_func = lambda d: Direction((d.value + 3) % 4)
-    else:
-        turn_func = lambda d: Direction((d.value + 1) % 4)
-
-    directions = [initial_direction]
-    for _ in range(num_segments - 1):
-        directions.append(turn_func(directions[-1]))
-
-    path = [(0, 0)]
-    for direction in directions:
-        dx, dy = direction_delta(direction)
-        for _ in range(side_length):
-            last = path[-1]
-            path.append((last[0] + dx, last[1] + dy))
-
-    xs = [p[0] for p in path]
-    ys = [p[1] for p in path]
-    min_x, min_y = min(xs), min(ys)
-    path = [(x - min_x, y - min_y) for x, y in path]
-    width = max(xs) - min_x + 1
-    height = max(ys) - min_y + 1
-
-    world = World(width=width, height=height)
-    _add_all_walls(world)
-
-    for k in range(len(path) - 1):
-        world.remove_wall(*path[k], *path[k + 1])
-
-    return world, path
-
 def _build_corridor_from_directions(directions, side_length):
     path = [(0, 0)]
     for direction in directions:

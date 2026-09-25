@@ -71,12 +71,7 @@ class MainWindow(QMainWindow):
         run_row.addWidget(self.new_variation_button)
         code_panel.addLayout(run_row)
 
-        self.next_task_button = QPushButton("Sledeći zadatak")
-        code_panel.addWidget(self.next_task_button)
-        self.next_task_button.clicked.connect(self._on_new_task_clicked)
-        self.next_task_button.setVisible(False)
-
-        self.new_task_button = QPushButton("Novi zadatak")
+        self.new_task_button = QPushButton("Sledeći zadatak")
         code_panel.addWidget(self.new_task_button)
         self.new_task_button.clicked.connect(self._on_new_task_clicked)
 
@@ -121,7 +116,6 @@ class MainWindow(QMainWindow):
         self.code_editor.clear()
         self._set_status("", "info")
         self.run_button.setVisible(True)
-        self.next_task_button.setVisible(False)
 
         maker, num_variations = random.choice(LEVEL_TASKS[level])
         self.task_factory = maker()
@@ -190,7 +184,6 @@ class MainWindow(QMainWindow):
                 self._set_status("Tačno! Rešenje radi za sve varijante zadatka.", "success")
             else:
                 self._set_status("Tačno!", "success")
-            self.next_task_button.setVisible(True)
         else:
             self._set_status("Rešenje nije tačno :c pokušaj ponovo.", "error")
             self._render_current_task()
@@ -202,7 +195,6 @@ class MainWindow(QMainWindow):
 
         self.current_code = code
         self._set_status("", "info")
-        self.next_task_button.setVisible(False)
 
         world_copy = copy.deepcopy(self.task_world)
         x, y, direction = self.task_start

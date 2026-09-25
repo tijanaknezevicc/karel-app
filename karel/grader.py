@@ -1,14 +1,21 @@
 import ast
 import random
+import copy
 
 from karel.levels import LEVELS
-from karel.maze import generate_perfect_maze, generate_stretched_maze
+from karel.maze import generate_perfect_maze, random_staircase_orientation
 from karel.robot import Direction, Robot
 from karel.executor import execute_program, validate_syntax
 from karel.exceptions import KarelRuntimeError, InvalidCommandError
-from karel.generator import random_square, generate_beeper_corridor, generate_beeper_hole_corridor, generate_branching_corridor, generate_maze_task, generate_multi_item_maze_task, generate_polyline_corridor
+from karel.generator import generate_staircase_corridor, random_square, generate_beeper_corridor, generate_beeper_hole_corridor, generate_branching_corridor, generate_maze_task, generate_multi_item_maze_task, generate_polyline_corridor
 from karel.world import World
 
+
+_NODE_TYPE_LABELS = {
+    ast.For: "for petlja",
+    ast.While: "while petlja",
+    ast.If: "if grananje",
+}
 
 def grade(code, level, task_factory, num_variations=5):
     try:
@@ -46,6 +53,18 @@ def _as_maker(task_factory):
         return task_factory
     return maker
 
+def missing_required_constructs(code, level):
+    required = LEVELS[level].get("required_node_types", set())
+    if not required:
+        return []
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return []
+    present_types = {type(node) for node in ast.walk(tree)}
+    missing_types = required - present_types
+    return [_NODE_TYPE_LABELS.get(t, t.__name__) for t in missing_types]
+
 def maze_pick_up_task():
     width = random.randint(3, 6)
     height = random.randint(3, 6)
@@ -56,6 +75,7 @@ def maze_pick_up_task():
     def success(robot, world):
         return robot.get_position() == goal and robot.beeper_count_in_bag() == expected_beepers
 
+    success.description = "Pokupi lopticu."
     return world, start, initial_beepers, success
 
 def maze_put_down_task():
@@ -66,6 +86,7 @@ def maze_put_down_task():
     def success(robot, world):
         return world.beeper_count(*goal) == 0 and robot.beeper_count_in_bag() == 0
 
+    success.description = "Ostavi lopticu u rupi."
     return world, start, initial_beepers, success
 
 def maze_both_task():
@@ -80,7 +101,57 @@ def maze_both_task():
         delivered = world.beeper_count(*goal) == 0
         return picked_up and delivered
 
+    success.description = "Pokupi lopticu i ostavi je u rupi."
     return world, start, initial_beepers, success
+
+def make_maze_beeper_count_task(min_size=4, max_size=6, task_type="pick_up"):
+    width = random.randint(min_size, max_size)
+    height = random.randint(min_size, max_size)
+
+    base_world = World(width, height)
+    generate_perfect_maze(base_world)
+    start = (0, 0, Direction.EAST)
+    goal = random_square(width, height, exclude=[(0, 0)])
+    item_position = None
+    if task_type == "both":
+        item_position = random_square(width, height, exclude=[(0, 0), goal])
+
+    def task_factory():
+        world = copy.deepcopy(base_world)
+        initial_beepers = 0
+
+        if task_type == "pick_up":
+            amount = random.randint(1, 10)
+            world.add_beeper(*goal, amount)
+            def success(robot, world):
+                return robot.get_position() == goal and robot.beeper_count_in_bag() == amount
+            description = "Pokupi sve loptice.\nObrati pažnju: ne znaš unapred koliko ih ima!"
+
+        elif task_type == "put_down":
+            amount = random.randint(1, 10)
+            initial_beepers = amount
+            world.add_beeper(*goal, -amount)
+            def success(robot, world):
+                return world.beeper_count(*goal) == 0 and robot.beeper_count_in_bag() == 0
+            description = "Ostavi sve loptice u rupu.\nObrati pažnju: ne znaš unapred koliko ih imaš!"
+
+        elif task_type == "both":
+            amount = random.randint(1, 10)
+            world.add_beeper(*item_position, amount)
+            world.add_beeper(*goal, -amount)
+            def success(robot, world):
+                picked_up = world.beeper_count(*item_position) == 0
+                delivered = world.beeper_count(*goal) == 0
+                return picked_up and delivered
+            description = "Pokupi sve loptice i ostavi ih u rupe.\nObrati pažnju: ne znaš unapred koliko ih ima!"
+
+        else:
+            raise ValueError("task_type mora biti 'pick_up', 'put_down' ili 'both'.")
+
+        success.description = description
+        return world, start, initial_beepers, success
+
+    return task_factory
 
 def maze_multi_item_task():
     width = random.randint(3, 6)
@@ -93,14 +164,7 @@ def maze_multi_item_task():
         bag_empty = robot.beeper_count_in_bag() == 0
         return sources_empty and destinations_filled and bag_empty
 
-    return world, start, 0, success
-
-def beeper_corridor_task():
-    world, start, total = generate_beeper_corridor()
-
-    def success(robot, world):
-        return (world.beepers) == 0  # all beepers picked up
-
+    success.description = "Pokupi sve loptice i ostavi ih u rupe."
     return world, start, 0, success
 
 def beeper_corridor_counting_task():
@@ -109,6 +173,7 @@ def beeper_corridor_counting_task():
     )
     def success(robot, world):
         return len(world.beepers) == 0
+    success.description = "Pokupi sve loptice u hodniku."
     return world, start, 0, success
 
 def make_beeper_corridor_conditional_task():
@@ -122,30 +187,8 @@ def make_beeper_corridor_conditional_task():
         )
         def success(robot, world):
             return len(world.beepers) == 0
+        success.description = "Pokupi sve loptice.\nObrati pažnju: ne znaš unapred koliko ih ima na svakom polju!"
         return world, start, 0, success
-
-    return task_factory
-
-def make_classic_maze_task(min_size=4, max_size=6, one_beeper=True):
-    width = random.randint(min_size, max_size)
-    height = random.randint(min_size, max_size)
-    base_world = World(width, height)
-    edges = generate_perfect_maze(base_world)
-    root = (0, 0)
-    original_goal = random_square(width, height, exclude=[root])
-
-    def task_factory():
-        stretched_world, shifted = generate_stretched_maze(edges, root=root, min_segment=2, max_segment=4)
-        start = (*shifted[root], Direction.EAST)
-        goal = shifted[original_goal]
-
-        amount = 1 if one_beeper else random.randint(1, 10)
-        stretched_world.add_beeper(*goal, amount)
-
-        def success(robot, world):
-            return robot.get_position() == goal and robot.beeper_count_in_bag() == amount
-
-        return stretched_world, start, 0, success
 
     return task_factory
 
@@ -159,6 +202,7 @@ def make_beeper_corridor_random_squares_task(min_length=6, max_length=12):
         )
         def success(robot, world):
             return len(world.beepers) == 0
+        success.description = "Pokupi sve loptice.\nObrati pažnju: ne znaš unapred na kojim poljima se nalaze!"
         return world, start, 0, success
 
     return task_factory
@@ -168,29 +212,34 @@ def make_polyline_task(min_side=2, max_side=5, num_segments=None, random_squares
         num_segments = random.choice([2, 3])
     initial_direction = random.choice(list(Direction))
     turn = random.choice(["left", "right"])
+    one_beeper = random.choice([True, False])
 
     def task_factory():
         world, start, total = generate_polyline_corridor(
             min_side=min_side, max_side=max_side, num_segments=num_segments,
-            one_beeper=(not random_squares), initial_direction=initial_direction,
+            one_beeper=one_beeper, initial_direction=initial_direction,
             turn=turn, random_squares=random_squares,
         )
         def success(robot, world):
             return len(world.beepers) == 0
+        success.description = "Pokupi sve loptice."
         return world, start, 0, success
 
     return task_factory
 
 def make_branching_corridor_task(min_length=6, max_length=12, branch_probability=0.3):
     orientation = random.choice(["horizontal", "vertical"])
+    main_line_index = random.choice([0, 1])
 
     def task_factory():
         world, start, total = generate_branching_corridor(
-            min_length=min_length, max_length=max_length, 
-            branch_probability=branch_probability, one_beeper=False, orientation=orientation,
+            min_length=min_length, max_length=max_length,
+            branch_probability=branch_probability, one_beeper=False,
+            orientation=orientation, main_line_index=main_line_index,
         )
         def success(robot, world):
             return len(world.beepers) == 0
+        success.description = "Pokupi sve loptice u bočnim prolazima."
         return world, start, 0, success
 
     return task_factory
@@ -202,6 +251,7 @@ def beeper_corridor_two_square_task():
     )
     def success(robot, world):
         return len(world.beepers) == 0
+    success.description = "Pokupi lopticu."
     return world, start, 0, success
 
 def beeper_corridor_end_task():
@@ -212,6 +262,7 @@ def beeper_corridor_end_task():
     )
     def success(robot, world):
         return len(world.beepers) == 0
+    success.description = "Pokupi loptice na kraju hodnika."
     return world, start, 0, success
 
 def beeper_corridor_end_hole_task():
@@ -222,6 +273,7 @@ def beeper_corridor_end_hole_task():
     )
     def success(robot, world):
         return len(world.beepers) == 0
+    success.description = "Pokupi loptice i ostavi ih u rupu."
     return world, start, 0, success
 
 def beeper_hole_corridor_task():
@@ -231,4 +283,32 @@ def beeper_hole_corridor_task():
     )
     def success(robot, world):
         return len(world.beepers) == 0
+    success.description = "Pokupi svaku grupu loptica i ostavi je u rupu pored."
+    return world, start, 0, success
+
+def make_staircase_task(min_side=1, max_side=1, min_segments=4, max_segments=8, random_squares=False):
+    diagonal, first_direction = random_staircase_orientation()
+    one_beeper = random.choice([True, False])
+
+    def task_factory():
+        world, start, total = generate_staircase_corridor(
+            min_side=min_side, max_side=max_side, min_segments=min_segments, max_segments=max_segments,
+            one_beeper=one_beeper, diagonal=diagonal, first_direction=first_direction,
+            random_squares=random_squares,
+        )
+        def success(robot, world):
+            return len(world.beepers) == 0
+        success.description = "Pokupi sve loptice."
+        return world, start, 0, success
+
+    return task_factory
+
+def staircase_counting_task():
+    world, start, total = generate_staircase_corridor(
+        min_segments=2, max_segments=4, min_side=1, max_side=3,
+        one_beeper=True, random_squares=False
+    )
+    def success(robot, world):
+        return len(world.beepers) == 0
+    success.description = "Pokupi sve loptice."
     return world, start, 0, success

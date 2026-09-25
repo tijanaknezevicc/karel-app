@@ -1,26 +1,39 @@
 import ast
 import builtins
 from karel.commands import COMMAND_ATTR_NAMES, expand_aliases
-from karel.exceptions import InfiniteLoopError, InvalidCommandError
+from karel.exceptions import InfiniteLoopError, InvalidCommandError, KarelRuntimeError
 from karel.levels import LEVELS
 
 
 MAX_STEPS = 10000  # to prevent infinite loops
 
 def validate_syntax(code, level):
-    tree = ast.parse(code)
+    try:
+        tree = ast.parse(code)
+    except SyntaxError as e:
+        raise InvalidCommandError(f"Greška u kodu: {e.msg} (linija {e.lineno})")
+
     allowed_nodes = LEVELS[level]["node_types"]
     allowed_commands = expand_aliases(LEVELS[level]["commands"])
     allowed_builtins = LEVELS[level]["builtins"]
 
+    called_name_nodes = {
+        id(node.func)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+
     for node in ast.walk(tree):
         if type(node) not in allowed_nodes:
-            raise InvalidCommandError(f"Neobradjena konstrukcija u kodu: {type(node).__name__}")
+            raise InvalidCommandError(f"Neobrađena konstrukcija u kodu: {type(node).__name__}")
 
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
             name = node.func.id
             if name not in allowed_commands and name not in allowed_builtins:
-                raise InvalidCommandError(f"Neobradjena komanda ili konstrukcija u kodu: {name}")
+                raise InvalidCommandError(f"Neobrađena komanda ili konstrukcija u kodu: {name}")
+
+        if isinstance(node, ast.Name) and node.id in allowed_commands and id(node) not in called_name_nodes:
+            raise InvalidCommandError(f"Komanda '{node.id}' je funkcija! Mora biti pozvana sa zagradama!")
 
 def _wrap_with_step_limit(method, step_counter):
     def wrapped(*args, **kwargs):
@@ -37,7 +50,6 @@ def execute_program(code, robot, level):
     namespace = {"__builtins__": {}}
 
     allowed_commands = expand_aliases(LEVELS[level]["commands"])
-
     for command_name in allowed_commands:
         attr_name = COMMAND_ATTR_NAMES[command_name]
         namespace[command_name] = _wrap_with_step_limit(getattr(robot, attr_name), step_counter)
@@ -45,4 +57,9 @@ def execute_program(code, robot, level):
     for builtin_name in LEVELS[level]["builtins"]:
         namespace[builtin_name] = getattr(builtins, builtin_name)
 
-    exec(code, namespace)
+    try:
+        exec(code, namespace)
+    except KarelRuntimeError:
+        raise
+    except Exception as e:
+        raise InvalidCommandError(f"Greška u kodu: {type(e).__name__}: {e}")

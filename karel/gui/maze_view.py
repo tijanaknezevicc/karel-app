@@ -7,6 +7,7 @@ WALL_WIDTH = 4
 GRID_COLOR = QColor(90, 90, 90)
 
 CELL_SIZE = 50
+MAZE_PADDING = 20
 
 class MazeView(QGraphicsView):
     def __init__(self):
@@ -126,6 +127,11 @@ class MazeView(QGraphicsView):
                 self.scene.addLine(boundary_x, top, boundary_x, bottom, self.wall_pen)
 
         self.draw_beepers(world)
-        self.scene.setSceneRect(0, 0, world.width * CELL_SIZE, world.height * CELL_SIZE)
+        
+        self.scene.setSceneRect(
+            -MAZE_PADDING, -MAZE_PADDING,
+            world.width * CELL_SIZE + 2 * MAZE_PADDING,
+            world.height * CELL_SIZE + 2 * MAZE_PADDING,
+        )
         self._fit_scene()
             

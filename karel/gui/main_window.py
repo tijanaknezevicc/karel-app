@@ -1,17 +1,17 @@
 import copy
 import random
 
-from PySide6.QtWidgets import QMainWindow, QMessageBox, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QButtonGroup, QLabel
-from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QButtonGroup, QLabel
+from PySide6.QtCore import QTimer, Qt
 
 from karel.gui.code_editor import CodeEditor
-from karel.gui.style import LEVEL_BUTTON_STYLE
+from karel.gui.style import LEVEL_BUTTON_STYLE, PANEL_LABEL_STYLE, STATUS_STYLES, TASK_DESCRIPTION_STYLE
 from karel.robot import Robot
 from karel.gui.maze_view import MazeView
 from karel.executor import execute_program
 from karel.exceptions import KarelRuntimeError, InvalidCommandError
 from karel.task_registry import LEVEL_TASKS
-from karel.grader import grade
+from karel.grader import grade, missing_required_constructs
 
 
 LEVEL_NAMES = ["linijski", "brojacka_petlja", "uslovna_petlja", "grananje", "napredni"]
@@ -28,30 +28,11 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Karel")
-        self.setMinimumSize(900, 600)
+        self.setMinimumSize(900, 650)
 
         central = QWidget()
         self.setCentralWidget(central)
-
         main_layout = QHBoxLayout(central)
-
-        code_panel = QVBoxLayout()
-        code_panel.addWidget(QLabel("Kod:"))
-
-        self.code_editor = CodeEditor()
-        code_panel.addWidget(self.code_editor)
-
-        self.run_button = QPushButton("Pokreni")
-        code_panel.addWidget(self.run_button)
-        self.run_button.clicked.connect(self.on_run_clicked)
-
-        self.new_task_button = QPushButton("Novi zadatak")
-        code_panel.addWidget(self.new_task_button)
-        self.new_task_button.clicked.connect(self._on_new_task_clicked)
-
-        self.new_variation_button = QPushButton("Nova varijanta")
-        code_panel.addWidget(self.new_variation_button)
-        self.new_variation_button.clicked.connect(self._on_new_variation_clicked)
 
         level_panel = QVBoxLayout()
         level_panel.addWidget(QLabel("Izaberi nivo:"))
@@ -69,13 +50,66 @@ class MainWindow(QMainWindow):
 
         level_panel.addStretch()
 
-        main_layout.addLayout(level_panel)
-        main_layout.addLayout(code_panel)
+        code_panel = QVBoxLayout()
+
+        code_label = QLabel("Kod")
+        code_label.setStyleSheet(PANEL_LABEL_STYLE)
+        code_label.setAlignment(Qt.AlignCenter)
+        code_panel.addWidget(code_label)
+
+        self.code_editor = CodeEditor()
+        code_panel.addWidget(self.code_editor)
+
+        self.run_button = QPushButton("Pokreni")
+        self.run_button.clicked.connect(self.on_run_clicked)
+
+        self.new_variation_button = QPushButton("Nova varijanta")
+        self.new_variation_button.clicked.connect(self._on_new_variation_clicked)
+
+        run_row = QHBoxLayout()
+        run_row.addWidget(self.run_button)
+        run_row.addWidget(self.new_variation_button)
+        code_panel.addLayout(run_row)
+
+        self.next_task_button = QPushButton("Sledeći zadatak")
+        code_panel.addWidget(self.next_task_button)
+        self.next_task_button.clicked.connect(self._on_new_task_clicked)
+        self.next_task_button.setVisible(False)
+
+        self.new_task_button = QPushButton("Novi zadatak")
+        code_panel.addWidget(self.new_task_button)
+        self.new_task_button.clicked.connect(self._on_new_task_clicked)
 
         self.maze_view = MazeView()
-        main_layout.addWidget(self.maze_view)
+
+        maze_panel = QVBoxLayout()
+
+        self.task_description_label = QLabel("")
+        self.task_description_label.setWordWrap(True)
+        self.task_description_label.setStyleSheet(TASK_DESCRIPTION_STYLE)
+        maze_panel.addWidget(self.task_description_label)
+        maze_panel.addWidget(self.maze_view)
+
+        right_side = QVBoxLayout()
+
+        content_layout = QHBoxLayout()
+        content_layout.addLayout(code_panel, 2)
+        content_layout.addLayout(maze_panel, 3)
+        right_side.addLayout(content_layout)
+
+        self.status_label = QLabel("")
+        self.status_label.setWordWrap(True)
+        self.status_label.setStyleSheet(STATUS_STYLES["info"])
+        right_side.addWidget(self.status_label)
+
+        main_layout.addLayout(level_panel)
+        main_layout.addLayout(right_side)
 
         self._load_new_task("linijski")
+
+    def _set_status(self, text, kind="info"):
+        self.status_label.setText(text)
+        self.status_label.setStyleSheet(STATUS_STYLES.get(kind, STATUS_STYLES["info"]))
 
     def _make_level_handler(self, level):
         def handler(checked):
@@ -84,6 +118,8 @@ class MainWindow(QMainWindow):
         return handler
 
     def _load_new_task(self, level):
+        self.code_editor.clear()
+        self._set_status("", "info")
         self.run_button.setVisible(True)
         self.next_task_button.setVisible(False)
 
@@ -101,6 +137,7 @@ class MainWindow(QMainWindow):
         self.task_start = start
         self.task_initial_beepers = initial_beepers
         self.task_success = success
+        self.task_description_label.setText(getattr(success, "description", ""))
         self._render_current_task()
 
     def _render_current_task(self):
@@ -113,9 +150,6 @@ class MainWindow(QMainWindow):
 
     def _on_new_variation_clicked(self):
         self._display_current_task()
-
-    def _on_next_task_clicked(self):
-        self._load_new_task(self.task_level)
 
     def _play_animation(self):
         self.animation_index = 0
@@ -137,6 +171,12 @@ class MainWindow(QMainWindow):
         self.animation_index += 1
 
     def _check_success(self):
+        missing = missing_required_constructs(self.current_code, self.task_level)
+        if missing:
+            self._set_status(f"Netačno. Nije upotrebljena {', '.join(missing)}.", "error")
+            self._render_current_task()
+            return
+
         if self.task_num_variations == 1:
             def frozen_task_factory():
                 world = copy.deepcopy(self.task_world)
@@ -146,26 +186,23 @@ class MainWindow(QMainWindow):
             is_correct = grade(self.current_code, self.task_level, self.task_factory, self.task_num_variations)
 
         if is_correct:
-            msg_box = QMessageBox(self)
-            msg_box.setWindowTitle("Rezultat")
             if self.task_num_variations > 1:
-                msg_box.setText("Tačno! Rešenje radi za sve varijante zadatka.")
+                self._set_status("Tačno! Rešenje radi za sve varijante zadatka.", "success")
             else:
-                msg_box.setText("Tačno!")
-            msg_box.setIcon(QMessageBox.Information)
-            ok_button = msg_box.addButton(QMessageBox.Ok)
-            next_button = msg_box.addButton("Sledeći zadatak", QMessageBox.ActionRole)
-            msg_box.exec()
-
-            if msg_box.clickedButton() == next_button:
-                self._load_new_task(self.task_level)
+                self._set_status("Tačno!", "success")
+            self.next_task_button.setVisible(True)
         else:
-            QMessageBox.warning(self, "Rezultat", "Rešenje nije tačno :c pokušaj ponovo.")
+            self._set_status("Rešenje nije tačno :c pokušaj ponovo.", "error")
             self._render_current_task()
 
     def on_run_clicked(self):
         code = self.code_editor.toPlainText()
+        if not code.strip():
+            return
+
         self.current_code = code
+        self._set_status("", "info")
+        self.next_task_button.setVisible(False)
 
         world_copy = copy.deepcopy(self.task_world)
         x, y, direction = self.task_start
@@ -187,7 +224,7 @@ class MainWindow(QMainWindow):
         try:
             execute_program(code, robot, self.task_level)
         except (KarelRuntimeError, InvalidCommandError) as e:
-            QMessageBox.warning(self, "Greška", str(e))
+            self._set_status(str(e), "error")
             self.execution_failed = True
 
         self.current_robot = robot

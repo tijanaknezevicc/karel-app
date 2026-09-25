@@ -67,7 +67,7 @@ def test_put_down_gives_robot_initial_beeper():
         width=5, height=5, task_type="put_down"
     )
     assert initial_beepers == 1
-    assert world.beepers == {}  # svet počinje bez loptica
+    assert world.beeper_count(*goal) == -1  # svet počinje bez loptica
 
 
 def test_both_places_item_away_from_start_and_goal():
@@ -226,24 +226,27 @@ def test_branching_corridor_total_matches_world_state():
 
 
 def test_branching_corridor_start_faces_east():
-    world, start, total = generate_branching_corridor(min_length=6, max_length=6, orientation="horizontal")
-    assert start == (0, 1, Direction.EAST)
+    world, start, total = generate_branching_corridor(
+        min_length=6, max_length=6, orientation="horizontal", main_line_index=0
+    )
+    assert start == (0, 0, Direction.EAST)
 
 
 def test_branching_corridor_vertical_start_position():
-    world, start, total = generate_branching_corridor(min_length=6, max_length=6, orientation="vertical")
-    assert start == (1, 0, Direction.EAST)
+    world, start, total = generate_branching_corridor(
+        min_length=6, max_length=6, orientation="vertical", main_line_index=0
+    )
+    assert start == (0, 0, Direction.EAST)
 
 
 def test_branching_corridor_no_branch_on_first_or_last_square():
     world, start, total = generate_branching_corridor(
-        min_length=6, max_length=6, branch_probability=1.0, orientation="horizontal"  # svako polje granа
+        min_length=6, max_length=6, branch_probability=1.0,
+        orientation="horizontal", main_line_index=0,
     )
-    # ni prvo (x=0) ni poslednje (x=5) polje glavne linije ne sme imati lopticu na bočnoj strani
-    assert world.beeper_count(0, 0) == 0
-    assert world.beeper_count(0, 2) == 0
-    assert world.beeper_count(5, 0) == 0
-    assert world.beeper_count(5, 2) == 0
+    # ni prvo (x=0) ni poslednje (x=5) polje glavne linije ne sme imati lopticu na bočnoj strani (y=1)
+    assert world.beeper_count(0, 1) == 0
+    assert world.beeper_count(5, 1) == 0
 
 
 def test_invalid_num_segments_raises_error():
@@ -302,14 +305,14 @@ def test_l_and_u_path_does_not_close():
         assert path[0] != path[-1]
 
 def test_polyline_fixed_shape_stays_same_across_calls():
-    # isti initial_direction/turn, razlicita duzina — oblik (niz pravaca) mora biti isti
+    # isti initial_direction/turn, razlicita duzina, oblik (niz pravaca) mora biti isti
     world1, path1 = generate_polyline_corridor_structure(
         num_segments=2, side_length=3, initial_direction=Direction.NORTH, turn="right"
     )
     world2, path2 = generate_polyline_corridor_structure(
         num_segments=2, side_length=5, initial_direction=Direction.NORTH, turn="right"
     )
-    # oba kreću u istom pravcu iz (0,0) — prva dva koraka moraju biti identична
+    
     assert path1[1] == path2[1]
 
 

@@ -1,6 +1,6 @@
 import random
 
-from karel.maze import generate_branching_corridor_structure, generate_perfect_maze, generate_polyline_corridor_structure
+from karel.maze import generate_branching_corridor_structure, generate_perfect_maze, generate_polyline_corridor_structure, generate_staircase_corridor_structure
 from karel.robot import Direction
 from karel.solver import is_solvable
 from karel.world import World
@@ -144,12 +144,12 @@ def generate_beeper_corridor(min_length=5, max_length=10, spread=True, step=1, o
                 world.add_beeper(*pos, 1)
                 beepers_added += 1
             else:
-                beepers_to_add = random.randint(1, 30)
+                beepers_to_add = random.randint(1, 10)
                 world.add_beeper(*pos, beepers_to_add)
                 beepers_added += beepers_to_add
 
     else:
-        amount = 1 if one_beeper else random.randint(1, 30)
+        amount = 1 if one_beeper else random.randint(1, 10)
         beeper_square = length - 2 if with_final_hole else length - 1
         pos = _corridor_position(beeper_square, orientation)
         world.add_beeper(*pos, amount)
@@ -188,14 +188,13 @@ def generate_beeper_hole_corridor(min_pairs=2, max_pairs=5, one_beeper=True, ori
 
     return world, start, total_beepers
 
-def generate_branching_corridor(min_length=6, max_length=12, branch_probability=0.3,
-                                  one_beeper=True, orientation=None):
+def generate_branching_corridor(min_length=6, max_length=12, branch_probability=0.3, one_beeper=True, orientation=None, main_line_index=None):
     if orientation is None:
         orientation = random.choice(["horizontal", "vertical"])
     length = random.randint(min_length, max_length)
 
     world, main_line, branch_positions = generate_branching_corridor_structure(
-        orientation, length, branch_probability
+        orientation, length, branch_probability, main_line_index=main_line_index
     )
 
     total_beepers = 0
@@ -212,8 +211,8 @@ def generate_branching_corridor(min_length=6, max_length=12, branch_probability=
     else:
         raise RuntimeError("generated maze is unsolvable!")
 
-def _place_corridor_beepers(world, positions, step=1, one_beeper=True, random_squares=False):
-    candidate_squares = positions[::step]
+def _place_corridor_beepers(world, positions, step=1, offset=0, one_beeper=True, random_squares=False):
+    candidate_squares = positions[offset::step]
     beepers_added = 0
 
     for i, pos in enumerate(candidate_squares):
@@ -225,7 +224,7 @@ def _place_corridor_beepers(world, positions, step=1, one_beeper=True, random_sq
             world.add_beeper(*pos, 1)
             beepers_added += 1
         else:
-            amount = random.randint(1, 30)
+            amount = random.randint(1, 10)
             world.add_beeper(*pos, amount)
             beepers_added += amount
 
@@ -250,3 +249,25 @@ def generate_polyline_corridor(min_side=2, max_side=5, num_segments=3, one_beepe
         raise RuntimeError("generated maze is unsolvable!")
 
     return world, start, total_beepers
+
+def generate_staircase_corridor(min_segments=2, max_segments=4, min_side=1, max_side=1, one_beeper=True, diagonal=None, first_direction=None, random_squares=False):
+    num_segments = random.randint(min_segments, max_segments)
+    side_length = random.randint(min_side, max_side)
+    world, path = generate_staircase_corridor_structure(
+        num_segments, side_length, 
+        diagonal=diagonal, first_direction=first_direction
+    )
+
+    candidate_squares = path[1:]
+    total_beepers = _place_corridor_beepers(
+        world, candidate_squares, step=2, offset=1,
+        one_beeper=one_beeper, random_squares=random_squares
+    )
+
+    start = (*path[0], Direction.EAST)
+    goal = path[-1]
+
+    if is_solvable(world, start, goal):
+        return world, start, total_beepers
+    else:
+        raise RuntimeError("generated maze is unsolvable!")
